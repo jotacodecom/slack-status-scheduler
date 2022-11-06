@@ -1,2 +1,2 @@
-# slack-status-scheduler
+# Slack Status Scheduler
 A Slack status scheduler
