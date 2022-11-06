@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.7.5</version>
+    <relativePath/> <!-- lookup parent from repository -->
+  </parent>
+  <name>slack-status-scheduler</name>
+  <description>Demo project for Spring Boot</description>
+  <properties>
+    <java.version>17</java.version>
+    <maven-checkstyle-plugin.version>3.2.0</maven-checkstyle-plugin.version>
+
+    <checkstyle-skip>false</checkstyle-skip>
+  </properties>
+
+  <groupId>com.jodacode</groupId>
+  <artifactId>slack-status-scheduler</artifactId>
+  <version>0.1-SNAPSHOT</version>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${maven-checkstyle-plugin.version}</version>
+        <dependencies>
+          <!-- upgrade checkstyle version at runtime-->
+          <!-- https://maven.apache.org/plugins/maven-checkstyle-plugin/examples/upgrading-checkstyle.html -->
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>10.1</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <configLocation>google_checks.xml</configLocation>
+          <logViolationsToConsole>true</logViolationsToConsole>
+          <inputEncoding>UTF-8</inputEncoding>
+          <outputEncoding>UFT-8s</outputEncoding>
+          <consoleOutput>true</consoleOutput>
+          <failsOnError>true</failsOnError>
+          <failOnViolation>true</failOnViolation>
+          <violationSeverity>warning</violationSeverity>
+          <linkXRef>false</linkXRef>
+          <skip>${checkstyle-skip}</skip>
+        </configuration>
+        <executions>
+          <execution>
+            <id>check-code-style</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
