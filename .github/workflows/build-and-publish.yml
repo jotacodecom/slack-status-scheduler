@@ -1,0 +1,112 @@
+name: Build and Deploy
+
+on:
+  push:
+    paths:
+      - '.mvn/**'
+      - 'src/**'
+      - 'pom.xml'
+      - 'mvnw'
+      - 'mvnw.cmd'
+      - '.github/workflows/build-and-publish.yml'
+  pull_request:
+    paths:
+      - '.mvn/**'
+      - 'src/**'
+      - 'pom.xml'
+      - 'mvnw'
+      - 'mvnw.cmd'
+      - '.github/workflows/build-and-publish.yml'
+  workflow_dispatch:
+
+# https://docs.github.com/en/actions/learn-github-actions/environment-variables
+env:
+
+jobs:
+  build:
+    name: Build
+
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idoutputs
+    outputs:
+      environment: ${{ steps.environment.outputs.deployEnv }}
+      appTag: ${{ steps.createAppTag.outputs.appTag }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Commit message
+        run: |
+          echo Latest commit: "${{ github.event.head_commit.message }}"
+
+      # https://docs.github.com/en/actions/learn-github-actions/expressions#endswith
+      # https://docs.github.com/en/actions/learn-github-actions/workflow-commands-for-github-actions#setting-an-environment-variable
+      - name: Staging
+        if: ${{ endsWith(github.ref, '/develop') && !endsWith(github.event.head_commit.message, 'no-deploy') }}
+        run: |
+          echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
+
+      - name: Production
+        if: ${{ endsWith(github.ref, '/main') && !endsWith(github.event.head_commit.message, 'no-deploy') }}
+        run: |
+          echo "DEPLOY_ENV=prod" >> $GITHUB_ENV
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Environment
+        id: environment
+        run: echo "::set-output name=deployEnv::${DEPLOY_ENV}"
+
+      - name: Setup JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Tests
+        run: ./mvnw -B clean test --file pom.xml  # -B,--batch-mode, see mvn --help for more info
+
+      - name: Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          files: ./target/site/jacoco/jacoco.xml
+          fail_ci_if_error: true
+          verbose: true
+
+      - name: Create Tag
+        if: ${{ env.DEPLOY_ENV == 'staging' || env.DEPLOY_ENV == 'prod' }}
+        id: createAppTag
+        run: echo "::set-output name=appTag::${DEPLOY_ENV}-$(date +'%Y%m%d%H%M%S')-${GITHUB_SHA}"
+
+  deploy:
+    name: Deploy
+
+    needs: build
+    timeout-minutes: 25
+
+    # https://docs.github.com/en/actions/using-jobs/using-concurrency
+    concurrency: build-and-deploy-app
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch vars from Build job
+        run: |
+          echo "DEPLOY_ENV=${{ needs.build.outputs.environment }}" >> $GITHUB_ENV
+          echo "DOCKER_IMAGE=${{ needs.build.outputs.appTag }}" >> $GITHUB_ENV
+
+      - name: Checkout
+        if: ${{ env.DEPLOY_ENV == 'staging' || env.DEPLOY_ENV == 'prod' }}
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        if: ${{ env.DEPLOY_ENV == 'staging' || env.DEPLOY_ENV == 'prod' }}
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Checkpoint
+        if: ${{ env.DEPLOY_ENV == 'staging' || env.DEPLOY_ENV == 'prod' }}
+        run: |
+          echo "Everything looks good so far"
